@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:listview_flutter/models/user-detail.dart';
 import 'package:listview_flutter/models/user.dart';
 import 'package:listview_flutter/api.dart';
 import 'package:flutter/material.dart';
@@ -10,9 +11,9 @@ class MyApp extends StatelessWidget {
   build(context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'My Http App',
+      title: 'Tes Aplikasi',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepOrange,
       ),
       home: MyListScreen(),
     );
@@ -32,9 +33,9 @@ class _MyListScreenState extends State {
 
   bool _isLoading = false;
 
-  _getUsers() {
+  Future<dynamic> _getUsers() {
     _isLoading = true;
-    API.getUsers().then((response) {
+    return API.getUsers().then((response) {
       final List<User> usersList = [];
 
       final List<dynamic> usersData = json.decode(response.body);
@@ -48,7 +49,15 @@ class _MyListScreenState extends State {
         final User user = User(
           id: usersData[i]['id'],
           name: usersData[i]['name'],
-          email: usersData[i]['email']
+          email: usersData[i]['email'],
+          phone: usersData[i]['phone'],
+          website: usersData[i]['website'],
+          address: usersData[i]['address']['street'] + ', ' +
+              usersData[i]['address']['suite'] + ', ' +
+              usersData[i]['address']['city'] + ',' + '\n' +
+              usersData[i]['address']['zipcode'],
+          company: usersData[i]['company']['name'] + '\n' +
+              usersData[i]['company']['catchPhrase']
         );
         usersList.add(user);
       }
@@ -62,6 +71,7 @@ class _MyListScreenState extends State {
         _isLoading = false;
       });
     });
+
   }
 
   Future<dynamic> _onRefresh() {
@@ -87,10 +97,17 @@ class _MyListScreenState extends State {
             children: <Widget>[
               Padding(
                 child: ListTile(
+                  leading: Icon(Icons.account_circle, size: 50.0,),
+                  trailing: Icon(Icons.favorite_border),
                   title: Text(_users[index].name),
                   subtitle: Text(_users[index].email),
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => UserPage(user: _users[index],)
+                    ),);
+                  },
                 ),
-                padding: EdgeInsets.all(10.0),
+                padding: EdgeInsets.all(5.0),
               ),
               Divider(
                 height: 5.0,
@@ -117,12 +134,76 @@ class _MyListScreenState extends State {
 }
 
 class UserPage extends StatelessWidget {
-  UserPage(this.data);
-  final data;
+  User user;
+  bool _isLoading = true;
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
+  GlobalKey<RefreshIndicatorState>();
 
-  Widget build(BuildContext build) => Scaffold(
-    appBar: AppBar(title: Text('User Profile'),),
-    body: ListView.builder(
-        itemBuilder: null),
-  );
+  UserPage({Key key, @required this.user}) : super(key: key);
+
+  Future<dynamic> _onRefresh() {
+    _buildUserDetail();
+  }
+
+  Widget _buildUserDetail() {
+    _isLoading = false;
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      key: _refreshIndicatorKey,
+      child: Container(
+        margin: EdgeInsets.only(left: 20.0),
+        child: Column(
+          children: <Widget>[
+            TextFormField(
+              initialValue: user.email,
+              readOnly: true,
+              decoration: InputDecoration(
+                  labelText: 'EMAIL'
+              ),
+            ),
+            TextFormField(
+              initialValue: user.phone,
+              readOnly: true,
+              decoration: InputDecoration(
+                  labelText: 'PHONE'
+              ),
+            ),
+            TextFormField(
+              initialValue: user.website,
+              readOnly: true,
+              decoration: InputDecoration(
+                  labelText: 'WEBSITE'
+              ),
+            ),
+            TextFormField(
+              initialValue: user.address,
+              maxLines: 2,
+              readOnly: true,
+              decoration: InputDecoration(
+                  labelText: 'ADDRESS'
+              ),
+            ),
+            TextFormField(
+              initialValue: user.company,
+              readOnly: true,
+              maxLines: 2,
+              decoration: InputDecoration(
+                  labelText: 'COMPANY'
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(user.name),),
+      body: _isLoading ? Center(
+        child: CircularProgressIndicator(),
+      )
+      :_buildUserDetail(),
+    );
+  }
 }
